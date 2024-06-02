@@ -1,10 +1,15 @@
 from datetime import datetime
 
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.mixins import UserPassesTestMixin
 from django.shortcuts import get_object_or_404, render
 from django.views.generic import (
     CreateView, DeleteView, DetailView, ListView, UpdateView
 )
-from .models import Post, Category
+from django.urls import reverse, reverse_lazy
+
+from .forms import CommentForm, PostForm
+from .models import Category, Comment, Post
 from core.consts import POSTS_ON_MAIN
 
 
@@ -40,6 +45,7 @@ def post_detail(request, post_id):
     post = get_object_or_404(posts_filter(), pk=post_id)
     return render(request, 'blog/detail.html', {'post': post})
 
+
 class OnlyAuthorMixin(UserPassesTestMixin):
 
     def test_func(self):
@@ -52,80 +58,59 @@ class PostCreateView(LoginRequiredMixin, CreateView):
     form_class = PostForm
 
     def form_valid(self, form):
-        # Присвоить полю author объект пользователя из запроса.
         form.instance.author = self.request.user
-        # Продолжить валидацию, описанную в форме.
         return super().form_valid(form)
 
 
-class BirthdayDeleteView(OnlyAuthorMixin, DeleteView):
-    model = Birthday
-    success_url = reverse_lazy('birthday:list')
+class PostDeleteView(OnlyAuthorMixin, DeleteView):
+    model = Post
+    success_url = reverse_lazy('Post:list')
 
 
-class BirthdayDetailView(DetailView):
-    model = Birthday
-
-    def get_context_data(self, **kwargs):
-        # Получаем словарь контекста:
-        context = super().get_context_data(**kwargs)
-        # Добавляем в словарь новый ключ:
-        context['birthday_countdown'] = calculate_birthday_countdown(
-            # Дату рождения берём из объекта в словаре context:
-            self.object.birthday
-        )
-        # Записываем в переменную form пустой объект формы.
-        context['form'] = CongratulationForm()
-        # Запрашиваем все поздравления для выбранного дня рождения.
-        context['congratulations'] = (
-            # Дополнительно подгружаем авторов комментариев,
-            # чтобы избежать множества запросов к БД.
-            self.object.congratulations.select_related('author')
-        )
-        # Возвращаем словарь контекста.
-        return context
+class PostDetailView(DetailView):
+    model = Post
 
 
-# Наследуем класс от встроенного ListView:
-class BirthdayListView(ListView):
-    # Указываем модель, с которой работает CBV...
-    model = Birthday
-    # ...сортировку, которая будет применена при выводе списка объектов:
+class PostListView(ListView):
+    model = Post
     ordering = 'id'
-    # ...и даже настройки пагинации:
     paginate_by = 10
 
 
-class BirthdayUpdateView(OnlyAuthorMixin, UpdateView):
-    model = Birthday
-    form_class = BirthdayForm
+class PostUpdateView(OnlyAuthorMixin, UpdateView):
+    model = Post
+    form_class = PostForm
 
-    # Определяем метод test_func() для миксина UserPassesTestMixin:
     def test_func(self):
-        # Получаем текущий объект.
         object = self.get_object()
-        # Метод вернёт True или False.
-        # Если пользователь - автор объекта, то тест будет пройден.
-        # Если нет, то будет вызвана ошибка 403.
         return object.author == self.request.user
 
 
-class CongratulationCreateView(LoginRequiredMixin, CreateView):
-    birthday = None
-    model = Congratulation
-    form_class = CongratulationForm
+class CommentCreateView(LoginRequiredMixin, CreateView):
+    Post = None
+    model = Comment
+    form_class = CommentForm
 
-    # Переопределяем dispatch()
     def dispatch(self, request, *args, **kwargs):
-        self.birthday = get_object_or_404(Birthday, pk=kwargs['pk'])
+        self.Post = get_object_or_404(Post, pk=kwargs['pk'])
         return super().dispatch(request, *args, **kwargs)
 
-    # Переопределяем form_valid()
     def form_valid(self, form):
         form.instance.author = self.request.user
-        form.instance.birthday = self.birthday
+        form.instance.Post = self.Post
         return super().form_valid(form)
 
-    # Переопределяем get_success_url()
     def get_success_url(self):
-        return reverse('birthday:detail', kwargs={'pk': self.birthday.pk})
+        return reverse('Post:detail', kwargs={'pk': self.Post.pk})
+
+
+class CommentDeleteView(OnlyAuthorMixin, DeleteView):
+    Post = None
+    model = Comment
+    form_class = CommentForm
+
+
+class CommentUpdateView(OnlyAuthorMixin, UpdateView):
+    Post = None
+    model = Comment
+    form_class = CommentForm
