@@ -40,6 +40,9 @@ class Comment(models.Model):
     )
     text = models.TextField('Комментарий')
 
+    class Meta:
+        ordering = ('created_at',)
+
 
 class Location(BaseModel):
     name = models.CharField(
@@ -91,3 +94,4 @@ class Post(BaseModel):
     class Meta:
         verbose_name = 'публикация'
         verbose_name_plural = 'Публикации'
+        ordering = ('pub_date',)
