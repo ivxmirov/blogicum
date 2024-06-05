@@ -32,6 +32,7 @@ class Category(BaseModel):
 
 class Comment(models.Model):
     author = models.ForeignKey(User, on_delete=models.CASCADE)
+    comment_count = 0
     created_at = models.DateTimeField(auto_now_add=True)
     post = models.ForeignKey(
         'Post',
@@ -94,4 +95,4 @@ class Post(BaseModel):
     class Meta:
         verbose_name = 'публикация'
         verbose_name_plural = 'Публикации'
-        ordering = ('pub_date',)
+        ordering = ('-pub_date',)
