@@ -49,6 +49,9 @@ class ProfileUpdateView(LoginRequiredMixin, UpdateView):
     def get_object(self):
         return self.request.user
 
+    def handle_no_permission(self):
+        return redirect('login')
+
     def get_success_url(self):
         return reverse(
             'blog:profile',
@@ -112,6 +115,16 @@ class PostCreateView(LoginRequiredMixin, CreateView):
         )
 
 
+class OnlyAuthorMixin(UserPassesTestMixin):
+
+    def test_func(self):
+        object = self.get_object()
+        return object.author == self.request.user
+
+    def handle_no_permission(self):
+        return redirect('blog:post_detail', post_id=self.kwargs['post_id'])
+
+
 class PostMixin:
     model = Post
     form_class = PostForm
@@ -139,21 +152,8 @@ class PostDetailView(PostMixin, DetailView):
         return context
 
 
-class OnlyAuthorMixin(UserPassesTestMixin):
-
-    def test_func(self):
-        object = self.get_object()
-        return object.author == self.request.user
-
-
 class PostUpdateView(PostMixin, OnlyAuthorMixin, UpdateView):
     template_name = 'blog/create.html'
-
-    def handle_no_permission(self):
-        return redirect(
-            'blog:post_detail',
-            post_id=self.kwargs[self.pk_url_kwarg]
-        )
 
     def get_success_url(self):
         return reverse(
@@ -169,18 +169,6 @@ class PostDeleteView(PostMixin, OnlyAuthorMixin, DeleteView):
         return reverse(
             'blog:profile',
             kwargs={'username': self.request.user.username}
-        )
-
-
-class CommentMixin:
-    model = Comment
-    form_class = CommentForm
-    pk_url_kwarg = ['comment_id', 'post_id']
-
-    def get_success_url(self):
-        return reverse(
-            'blog:post_detail',
-            kwargs={'post_id': self.kwargs['post_id']}
         )
 
 
@@ -206,21 +194,25 @@ class CommentCreateView(LoginRequiredMixin, CreateView):
         )
 
 
-class CommentUpdateView(CommentMixin, OnlyAuthorMixin, UpdateView):
+class CommentMixin:
+    model = Comment
+    form_class = CommentForm
+    pk_url_kwarg = ['comment_id', 'post_id']
     template_name = 'blog/comment.html'
 
     def get_object(self):
-        return get_object_or_404(
-            Comment,
-            pk=self.kwargs['comment_id']
+        return get_object_or_404(Comment, pk=self.kwargs['comment_id'])
+
+    def get_success_url(self):
+        return reverse(
+            'blog:post_detail',
+            kwargs={'post_id': self.kwargs['post_id']}
         )
+
+
+class CommentUpdateView(CommentMixin, OnlyAuthorMixin, UpdateView):
+    pass
 
 
 class CommentDeleteView(CommentMixin, OnlyAuthorMixin, DeleteView):
-    template_name = 'blog/comment.html'
-
-    def get_object(self):
-        return get_object_or_404(
-            Comment,
-            pk=self.kwargs['comment_id']
-        )
+    pass
