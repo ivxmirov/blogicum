@@ -14,6 +14,8 @@ from core.consts import POSTS_ON_PAGE
 
 
 class ProfileListView(ListView):
+    """Display profile's posts and information about profile"""
+
     model = User
     template_name = 'blog/profile.html'
     paginate_by = POSTS_ON_PAGE
@@ -42,6 +44,8 @@ class ProfileListView(ListView):
 
 
 class ProfileUpdateView(LoginRequiredMixin, UpdateView):
+    """Edit profile. Is available only for author of profile"""
+
     model = User
     form_class = UserForm
     template_name = 'blog/user.html'
@@ -60,6 +64,11 @@ class ProfileUpdateView(LoginRequiredMixin, UpdateView):
 
 
 class CategoryListView(ListView):
+    """
+    Display category's posts except deferred and unpublished
+    and information about category
+    """
+
     model = Category
     paginate_by = POSTS_ON_PAGE
     template_name = 'blog/category.html'
@@ -86,6 +95,8 @@ class CategoryListView(ListView):
 
 
 class PostListView(ListView):
+    """Display all posts on main except deferred and unpublished"""
+
     model = Post
     paginate_by = POSTS_ON_PAGE
     template_name = 'blog/index.html'
@@ -100,6 +111,8 @@ class PostListView(ListView):
 
 
 class PostCreateView(LoginRequiredMixin, CreateView):
+    """Create new post. Is available only for logged in users"""
+
     model = Post
     form_class = PostForm
     template_name = 'blog/create.html'
@@ -142,6 +155,11 @@ class PostMixin:
 
 
 class PostDetailView(DetailView):
+    """
+    Display post with comments and information.
+    Is available only for author if it is deffered or unpublished
+    """
+
     model = Post
     form_class = PostForm
     template_name = 'blog/detail.html'
@@ -171,6 +189,8 @@ class PostDetailView(DetailView):
 
 
 class PostUpdateView(PostMixin, OnlyAuthorMixin, UpdateView):
+    """Edit post. Is available only for it's author"""
+
     template_name = 'blog/create.html'
 
     def get_success_url(self):
@@ -181,6 +201,8 @@ class PostUpdateView(PostMixin, OnlyAuthorMixin, UpdateView):
 
 
 class PostDeleteView(PostMixin, OnlyAuthorMixin, DeleteView):
+    """Delete post. Is available only for it's author"""
+
     template_name = 'blog/create.html'
 
     def get_success_url(self):
@@ -191,6 +213,8 @@ class PostDeleteView(PostMixin, OnlyAuthorMixin, DeleteView):
 
 
 class CommentCreateView(LoginRequiredMixin, CreateView):
+    """Add comment. Is available only for logged in users"""
+
     model = Comment
     form_class = CommentForm
     post_instance = None
@@ -229,8 +253,12 @@ class CommentMixin:
 
 
 class CommentUpdateView(CommentMixin, OnlyAuthorMixin, UpdateView):
+    """Edit comment. Is available only for it's author"""
+
     pass
 
 
 class CommentDeleteView(CommentMixin, OnlyAuthorMixin, DeleteView):
+    """Delete comment. Is available only for it's author"""
+
     pass
