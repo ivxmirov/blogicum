@@ -24,11 +24,11 @@ class ProfileListView(ListView):
     def get_queryset(self):
         if self.request.user == self.get_object():
             page_obj = Post.objects.filter(
-                author=self.get_object().id
+                author=self.get_object()
             )
         else:
             page_obj = Post.objects.filter(
-                author=self.get_object().id,
+                author=self.get_object(),
                 category__is_published=True,
                 is_published=True,
                 pub_date__lte=datetime.now()
@@ -141,14 +141,32 @@ class PostMixin:
         return super().form_valid(form)
 
 
-class PostDetailView(PostMixin, DetailView):
+class PostDetailView(DetailView):
+    model = Post
+    form_class = PostForm
     template_name = 'blog/detail.html'
+    pk_url_kwarg = 'post_id'
+
+    def get_object(self):
+        post_instance = get_object_or_404(
+            Post,
+            pk=self.kwargs['post_id']
+        )
+        if post_instance.author == self.request.user:
+            return post_instance
+        else:
+            return get_object_or_404(
+                Post,
+                pk=self.kwargs['post_id'],
+                is_published=True,
+                pub_date__lte=datetime.now()
+            )
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['post'] = self.get_object()
         context['form'] = CommentForm()
-        context['comments'] = (self.object.comments.select_related('author'))
+        context['comments'] = self.object.comments.select_related('author')
         return context
 
 
