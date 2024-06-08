@@ -1,7 +1,6 @@
 from datetime import datetime
 
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib.auth.mixins import UserPassesTestMixin
 from django.shortcuts import get_object_or_404, redirect
 from django.views.generic import (
     CreateView, DeleteView, DetailView, ListView, UpdateView
@@ -9,8 +8,17 @@ from django.views.generic import (
 from django.urls import reverse
 
 from .forms import CommentForm, PostForm, UserForm
+from .mixins import CommentMixin, OnlyAuthorMixin, PostMixin
 from .models import Category, Comment, Post, User
 from core.consts import POSTS_ON_PAGE
+
+
+def published_objects():
+    return Post.objects.filter(
+        category__is_published=True,
+        is_published=True,
+        pub_date__lte=datetime.now()
+    )
 
 
 class ProfileListView(ListView):
@@ -25,16 +33,9 @@ class ProfileListView(ListView):
 
     def get_queryset(self):
         if self.request.user == self.get_object():
-            page_obj = Post.objects.filter(
-                author=self.get_object()
-            )
+            page_obj = Post.objects.filter(author=self.get_object())
         else:
-            page_obj = Post.objects.filter(
-                author=self.get_object(),
-                category__is_published=True,
-                is_published=True,
-                pub_date__lte=datetime.now()
-            )
+            page_obj = published_objects().filter(author=self.get_object())
         return page_obj
 
     def get_context_data(self, **kwargs):
@@ -81,11 +82,7 @@ class CategoryListView(ListView):
         )
 
     def get_queryset(self):
-        page_obj = Post.objects.filter(
-            category=self.get_object(),
-            is_published=True,
-            pub_date__lte=datetime.now()
-        )
+        page_obj = published_objects().filter(category=self.get_object())
         return page_obj
 
     def get_context_data(self, **kwargs):
@@ -102,11 +99,7 @@ class PostListView(ListView):
     template_name = 'blog/index.html'
 
     def get_queryset(self):
-        page_obj = Post.objects.filter(
-            category__is_published=True,
-            is_published=True,
-            pub_date__lte=datetime.now()
-        )
+        page_obj = published_objects().all()
         return page_obj
 
 
@@ -126,32 +119,6 @@ class PostCreateView(LoginRequiredMixin, CreateView):
             'blog:profile',
             kwargs={'username': self.request.user.username}
         )
-
-
-class OnlyAuthorMixin(UserPassesTestMixin):
-
-    def test_func(self):
-        object = self.get_object()
-        return object.author == self.request.user
-
-    def handle_no_permission(self):
-        return redirect('blog:post_detail', post_id=self.kwargs['post_id'])
-
-
-class PostMixin:
-    model = Post
-    form_class = PostForm
-    pk_url_kwarg = 'post_id'
-
-    def get_object(self):
-        return get_object_or_404(
-            Post,
-            pk=self.kwargs['post_id']
-        )
-
-    def form_valid(self, form):
-        form.instance.author = self.request.user
-        return super().form_valid(form)
 
 
 class PostDetailView(DetailView):
@@ -233,22 +200,6 @@ class CommentCreateView(LoginRequiredMixin, CreateView):
         return reverse(
             'blog:post_detail',
             kwargs={'post_id': self.post_instance.pk}
-        )
-
-
-class CommentMixin:
-    model = Comment
-    form_class = CommentForm
-    pk_url_kwarg = ['comment_id', 'post_id']
-    template_name = 'blog/comment.html'
-
-    def get_object(self):
-        return get_object_or_404(Comment, pk=self.kwargs['comment_id'])
-
-    def get_success_url(self):
-        return reverse(
-            'blog:post_detail',
-            kwargs={'post_id': self.kwargs['post_id']}
         )
 
 

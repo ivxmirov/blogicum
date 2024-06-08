@@ -1,16 +1,16 @@
 from django.contrib.auth import get_user_model
 from django.db import models
 
-from core.consts import MAXLENGTH
-from core.models import BaseModel
+from core.consts import MAX_LENGTH
+from core.models import BaseModel, BaseModelPublished
 
 User = get_user_model()
 
 
-class Category(BaseModel):
+class Category(BaseModelPublished):
     title = models.CharField(
         'Заголовок',
-        max_length=MAXLENGTH
+        max_length=MAX_LENGTH
     )
     description = models.TextField('Описание')
     slug = models.SlugField(
@@ -30,9 +30,8 @@ class Category(BaseModel):
         return self.title
 
 
-class Comment(models.Model):
+class Comment(BaseModel):
     author = models.ForeignKey(User, on_delete=models.CASCADE)
-    created_at = models.DateTimeField(auto_now_add=True)
     post = models.ForeignKey(
         'Post',
         on_delete=models.CASCADE,
@@ -44,10 +43,10 @@ class Comment(models.Model):
         ordering = ('created_at',)
 
 
-class Location(BaseModel):
+class Location(BaseModelPublished):
     name = models.CharField(
         'Название места',
-        max_length=MAXLENGTH
+        max_length=MAX_LENGTH
     )
 
     class Meta:
@@ -58,10 +57,10 @@ class Location(BaseModel):
         return self.name
 
 
-class Post(BaseModel):
+class Post(BaseModelPublished):
     title = models.CharField(
         'Заголовок',
-        max_length=MAXLENGTH
+        max_length=MAX_LENGTH
     )
     text = models.TextField('Текст')
     pub_date = models.DateTimeField(
@@ -92,6 +91,7 @@ class Post(BaseModel):
     image = models.ImageField('Фото', upload_to='posts_images', blank=True)
 
     class Meta:
+        default_related_name = 'posts'
         verbose_name = 'публикация'
         verbose_name_plural = 'Публикации'
         ordering = ('-pub_date',)
